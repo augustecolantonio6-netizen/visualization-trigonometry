@@ -1,0 +1,2066 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>// TRIG LAB — Visualiseur Trigonométrique Interactif</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-base: #070a0d;
+      --bg-surface: #0c1115;
+      --bg-card: #10171d;
+      --bg-card-hover: #151e26;
+      --border-subtle: #19232c;
+      --border-focus: #2d3f4e;
+      --border-active: #3f586d;
+      
+      --text-main: #e2e8f0;
+      --text-muted: #8494a5;
+      --text-dim: #4d5d6d;
+      
+      --color-cos: #e2e8f0;
+      --color-cos-dim: rgba(226, 232, 240, 0.2);
+      
+      --color-sin: #59d9ff;
+      --color-sin-glow: rgba(89, 217, 255, 0.45);
+      --color-sin-dim: rgba(89, 217, 255, 0.15);
+      
+      --color-tan: #65ff9a;
+      --color-tan-glow: rgba(101, 255, 154, 0.45);
+      --color-tan-dim: rgba(101, 255, 154, 0.15);
+
+      --color-cot: #ffb454;
+      --color-cot-glow: rgba(255, 180, 84, 0.45);
+      --color-cot-dim: rgba(255, 180, 84, 0.15);
+      
+      --color-asymptote: #ff5252;
+      --color-theta: #facc15;
+      --color-theta-dim: rgba(250, 204, 21, 0.2);
+      
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      
+      --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: var(--font-mono);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.45;
+      overflow-x: hidden;
+    }
+
+    /* Top Navigation Bar */
+    header {
+      background-color: var(--bg-surface);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      z-index: 10;
+    }
+
+    .brand {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    .brand h1 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: var(--text-main);
+    }
+
+    .brand h1 span {
+      color: var(--color-tan);
+    }
+
+    .brand .subtitle {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-family: var(--font-sans);
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .status-pill {
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-pill .indicator {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background-color: var(--color-tan);
+      box-shadow: 0 0 6px var(--color-tan);
+    }
+
+    /* Dashboard Layout */
+    .dashboard {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 390px;
+      gap: 16px;
+      padding: 16px;
+      max-width: 1720px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    @media (max-width: 1200px) {
+      .dashboard {
+        grid-template-columns: 1fr 350px;
+        padding: 12px;
+        gap: 12px;
+      }
+    }
+
+    @media (max-width: 960px) {
+      .dashboard {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Visual Stage: Circle + Cartesian Graph */
+    .visual-stage {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    @media (max-width: 768px) {
+      .visual-stage {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Square Canvas Cards */
+    .canvas-panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-header {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(16, 23, 29, 0.6);
+      font-size: 0.8rem;
+      letter-spacing: 0.03em;
+    }
+
+    .panel-title {
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-tag {
+      font-size: 0.68rem;
+      padding: 2px 6px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+    }
+
+    .square-canvas-wrapper {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      background-color: #06090c;
+      overflow: hidden;
+      cursor: crosshair;
+    }
+
+    .square-canvas-wrapper canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .panel-footer {
+      padding: 8px 12px;
+      border-top: 1px solid var(--border-subtle);
+      background: var(--bg-card);
+      font-size: 0.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--text-muted);
+    }
+
+    .legend-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.72rem;
+    }
+
+    .legend-color {
+      width: 11px;
+      height: 3px;
+      border-radius: 2px;
+    }
+
+    .legend-color.cos { background: var(--color-cos); }
+    .legend-color.sin { background: var(--color-sin); box-shadow: 0 0 5px var(--color-sin-glow); }
+    .legend-color.tan { background: var(--color-tan); box-shadow: 0 0 5px var(--color-tan-glow); }
+    .legend-color.cot { background: var(--color-cot); box-shadow: 0 0 5px var(--color-cot-glow); }
+    .legend-color.asymptote {
+      background: transparent;
+      border-bottom: 2px dashed var(--color-asymptote);
+      height: 2px;
+    }
+
+    /* Controls & Telemetry Panel */
+    .controls-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px;
+    }
+
+    .card-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .angle-control-section {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .angle-display-large {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 8px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+    }
+
+    .angle-math-exact {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--color-theta);
+      text-shadow: 0 0 8px var(--color-theta-dim);
+    }
+
+    .angle-math-deg {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .slider-container {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .slider-ticks-bar {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      padding: 0 2px;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 3px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--color-tan);
+      border: 2px solid var(--bg-base);
+      box-shadow: 0 0 10px var(--color-tan-glow);
+      cursor: pointer;
+      transition: transform 0.1s ease;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--color-tan);
+      border: 2px solid var(--bg-base);
+      box-shadow: 0 0 10px var(--color-tan-glow);
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+
+    /* Input Row & Pi Button */
+    .input-row {
+      display: flex;
+      gap: 6px;
+      align-items: stretch;
+    }
+
+    .text-input-wrapper {
+      position: relative;
+      flex: 1;
+    }
+
+    .text-input-wrapper span.prefix {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-dim);
+      font-size: 0.8rem;
+      pointer-events: none;
+    }
+
+    .custom-input {
+      width: 100%;
+      height: 100%;
+      padding: 8px 10px 8px 32px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      color: var(--text-main);
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .custom-input:focus {
+      border-color: var(--color-tan);
+      box-shadow: 0 0 8px var(--color-tan-dim);
+    }
+
+    .custom-input.input-valid {
+      border-color: var(--color-tan);
+    }
+
+    .custom-input.input-invalid {
+      border-color: var(--color-asymptote);
+    }
+
+    .btn {
+      padding: 8px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      color: var(--text-main);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .btn:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-active);
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn.active {
+      background: var(--color-tan-dim);
+      border-color: var(--color-tan);
+      color: var(--color-tan);
+    }
+
+    .btn-pi {
+      font-weight: 700;
+      color: var(--color-theta);
+      border-color: rgba(250, 204, 21, 0.25);
+      background: rgba(250, 204, 21, 0.05);
+      padding: 8px 10px;
+    }
+
+    .btn-pi:hover {
+      background: rgba(250, 204, 21, 0.15);
+      border-color: var(--color-theta);
+    }
+
+    .input-hint {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      display: flex;
+      justify-content: space-between;
+      padding: 0 2px;
+    }
+
+    .playback-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .playback-row .btn-play {
+      flex: 1;
+    }
+
+    .speed-btn-group {
+      display: flex;
+      gap: 4px;
+    }
+
+    .speed-btn {
+      padding: 6px 8px;
+      font-size: 0.7rem;
+    }
+
+    /* Telemetry Matrix Grid */
+    .value-cards-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .value-box {
+      padding: 9px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      position: relative;
+      transition: border-color 0.2s ease, background 0.2s ease;
+    }
+
+    .value-box::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 3px;
+      border-top-left-radius: var(--radius-sm);
+      border-bottom-left-radius: var(--radius-sm);
+    }
+
+    .value-box.box-cos::before { background: var(--color-cos); }
+    .value-box.box-sin::before { background: var(--color-sin); box-shadow: 0 0 6px var(--color-sin-glow); }
+    .value-box.box-tan::before { background: var(--color-tan); box-shadow: 0 0 8px var(--color-tan-glow); }
+    .value-box.box-cot::before { background: var(--color-cot); box-shadow: 0 0 8px var(--color-cot-glow); }
+
+    .value-box-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2px;
+    }
+
+    .value-label {
+      font-size: 0.73rem;
+      font-weight: 600;
+    }
+
+    .value-box.box-cos .value-label { color: var(--color-cos); }
+    .value-box.box-sin .value-label { color: var(--color-sin); }
+    .value-box.box-tan .value-label { color: var(--color-tan); font-weight: 700; }
+    .value-box.box-cot .value-label { color: var(--color-cot); font-weight: 700; }
+
+    .value-formula {
+      font-size: 0.68rem;
+      color: var(--text-dim);
+    }
+
+    .value-number {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .value-box.box-cos .value-number { color: var(--text-main); }
+    .value-box.box-sin .value-number { color: var(--color-sin); }
+    
+    .value-box.box-tan {
+      background: rgba(101, 255, 154, 0.03);
+      border-color: rgba(101, 255, 154, 0.2);
+    }
+    
+    .value-box.box-tan .value-number {
+      font-size: 1.25rem;
+      color: var(--color-tan);
+      text-shadow: 0 0 8px var(--color-tan-glow);
+    }
+
+    .value-box.box-cot {
+      background: rgba(255, 180, 84, 0.03);
+      border-color: rgba(255, 180, 84, 0.2);
+    }
+    
+    .value-box.box-cot .value-number {
+      font-size: 1.25rem;
+      color: var(--color-cot);
+      text-shadow: 0 0 8px var(--color-cot-glow);
+    }
+
+    .value-box.is-asymptote {
+      background: rgba(255, 82, 82, 0.08) !important;
+      border-color: var(--color-asymptote) !important;
+    }
+
+    .value-box.is-asymptote .value-number {
+      color: var(--color-asymptote) !important;
+      text-shadow: none !important;
+      font-size: 1rem !important;
+    }
+
+    /* Relations Breakdown Banner */
+    .relation-banner {
+      background: #090e12;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 0.76rem;
+    }
+
+    .relation-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 6px;
+    }
+
+    .relation-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .fraction-display {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      vertical-align: middle;
+      line-height: 1.1;
+      font-size: 0.72rem;
+    }
+
+    .fraction-top {
+      border-bottom: 1px solid var(--text-muted);
+      padding: 0 3px;
+    }
+
+    .fraction-bottom {
+      padding: 0 3px;
+    }
+
+    footer {
+      padding: 10px 20px;
+      border-top: 1px solid var(--border-subtle);
+      background: var(--bg-surface);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .coordinates-pill {
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header>
+    <div class="brand">
+      <h1>// TRIG<span>LAB</span></h1>
+      <span class="subtitle">visualiseur mathématique &mdash; cercle &amp; graphes 1:1 synchronisés</span>
+    </div>
+    <div class="header-controls">
+      <div class="status-pill">
+        <span class="indicator"></span>
+        <span id="engineStatus">MOTEUR ACTIF &bull; 60 FPS</span>
+      </div>
+      <button class="btn" id="btnReset" title="Réinitialiser l'angle à 0">
+        &circlearrowleft; Reset
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Dashboard Workspace -->
+  <main class="dashboard">
+
+    <!-- Left Visual Stage: Square Circle & Square Cartesian Graph -->
+    <div class="visual-stage">
+
+      <!-- 1. Trigonometric Circle Panel -->
+      <section class="canvas-panel" aria-label="Cercle Trigonométrique">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span>&odot;</span> CERCLE TRIGONOMÉTRIQUE
+          </div>
+          <div class="panel-tag">PLAN R = 1</div>
+        </div>
+
+        <div class="square-canvas-wrapper" id="circleWrapper">
+          <canvas id="circleCanvas"></canvas>
+        </div>
+
+        <div class="panel-footer">
+          <div class="legend-group">
+            <span class="legend-item"><span class="legend-color cos"></span> cos(θ)</span>
+            <span class="legend-item"><span class="legend-color sin"></span> sin(θ)</span>
+            <span class="legend-item"><span class="legend-color tan"></span> tan(θ) [x=1]</span>
+            <span class="legend-item"><span class="legend-color cot"></span> cot(θ) [y=1]</span>
+          </div>
+          <span id="circleCursorCoords" class="coordinates-pill">P(cos, sin)</span>
+        </div>
+      </section>
+
+      <!-- 2. Cartesian Graph Panel [0 -> theta] with 1:1 Isometric Aspect Ratio -->
+      <section class="canvas-panel" aria-label="Graphique Cartésien">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span>&fnof;(x)</span> GRAPHES [ 0 &rarr; &theta; ]
+          </div>
+          <div class="panel-tag">ÉCHELLE 1:1 ISOMÉTRIQUE</div>
+        </div>
+
+        <div class="square-canvas-wrapper" id="graphWrapper">
+          <canvas id="graphCanvas"></canvas>
+        </div>
+
+        <div class="panel-footer">
+          <div class="legend-group">
+            <span class="legend-item"><span class="legend-color cos"></span> cos</span>
+            <span class="legend-item"><span class="legend-color sin"></span> sin</span>
+            <span class="legend-item"><span class="legend-color tan"></span> tan</span>
+            <span class="legend-item"><span class="legend-color cot"></span> cot</span>
+            <span class="legend-item"><span class="legend-color asymptote"></span> asymp.</span>
+          </div>
+          <span id="graphDomainLabel" class="coordinates-pill">x &isin; [0, &theta;]</span>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Right Controls & Telemetry Panel -->
+    <aside class="controls-panel">
+
+      <!-- Section: Angle Selection -->
+      <div class="card angle-control-section">
+        <div class="card-title">
+          <span>// CONTRÔLE DE L'ANGLE &theta;</span>
+          <span id="quadrantTag" class="panel-tag">QUADRANT I</span>
+        </div>
+
+        <!-- Angle Readout -->
+        <div class="angle-display-large">
+          <div>
+            <div id="exactAngleLabel" class="angle-math-exact">&theta; = &pi;/4</div>
+            <div id="radAngleLabel" style="font-size: 0.72rem; color: var(--text-dim);">0.785 rad</div>
+          </div>
+          <div id="degAngleLabel" class="angle-math-deg">45.0&deg;</div>
+        </div>
+
+        <!-- Range Slider [0 -> 2pi] -->
+        <div class="slider-container">
+          <input type="range" id="angleSlider" min="0" max="6.283185307179586" step="0.001" value="0.7853981633974483">
+          <div class="slider-ticks-bar">
+            <span>0</span>
+            <span>&pi;/2</span>
+            <span>&pi;</span>
+            <span>3&pi;/2</span>
+            <span>2&pi;</span>
+          </div>
+        </div>
+
+        <!-- Manual Input (accepts pi/4, π/4, 3pi/2, 1.5pi, 45deg, etc.) -->
+        <div class="input-row">
+          <div class="text-input-wrapper">
+            <span class="prefix">&theta; =</span>
+            <input type="text" id="angleTextInput" class="custom-input" placeholder="ex: pi/4, &pi;/4, 2pi/3, 1.5pi, 45deg" spellcheck="false" autocomplete="off">
+          </div>
+          <button class="btn btn-pi" id="btnInsertPi" title="Insérer le symbole &pi;">&pi;</button>
+          <button class="btn" id="btnApplyAngle">OK</button>
+        </div>
+        <div class="input-hint">
+          <span id="inputParsePreview">Syntaxe : pi/4, &pi;/4, 3*pi/2, 1.5pi, 45deg...</span>
+        </div>
+
+        <!-- Animation / Playback Bar -->
+        <div class="playback-row">
+          <button class="btn btn-play" id="btnPlay">
+            <span id="playIcon">&blacktriangleright;</span> <span id="playText">Lecture auto</span>
+          </button>
+          <div class="speed-btn-group">
+            <button class="btn speed-btn active" data-speed="1">1x</button>
+            <button class="btn speed-btn" data-speed="2">2x</button>
+            <button class="btn speed-btn" data-speed="0.5">0.5x</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Numerical Telemetry Matrix -->
+      <div class="card">
+        <div class="card-title">
+          <span>// MATRICE DE VALEURS</span>
+          <span class="panel-tag">TEMPS RÉEL</span>
+        </div>
+
+        <div class="value-cards-grid">
+          
+          <!-- Cosine Box -->
+          <div class="value-box box-cos">
+            <div class="value-box-top">
+              <span class="value-label">COSINUS (Abscisse)</span>
+              <span class="value-formula">cos(&theta;)</span>
+            </div>
+            <div class="value-number" id="valCos">0.707</div>
+          </div>
+
+          <!-- Sine Box -->
+          <div class="value-box box-sin">
+            <div class="value-box-top">
+              <span class="value-label">SINUS (Ordonnée)</span>
+              <span class="value-formula">sin(&theta;)</span>
+            </div>
+            <div class="value-number" id="valSin">0.707</div>
+          </div>
+
+          <!-- Tangent Box -->
+          <div class="value-box box-tan" id="boxTan">
+            <div class="value-box-top">
+              <span class="value-label">TANGENTE (Pente x=1)</span>
+              <span class="value-formula">tan(&theta;) = sin / cos</span>
+            </div>
+            <div class="value-number" id="valTan">1.000</div>
+          </div>
+
+          <!-- Cotangent Box -->
+          <div class="value-box box-cot" id="boxCot">
+            <div class="value-box-top">
+              <span class="value-label">COTANGENTE (Pente y=1)</span>
+              <span class="value-formula">cot(&theta;) = cos / sin</span>
+            </div>
+            <div class="value-number" id="valCot">1.000</div>
+          </div>
+
+        </div>
+
+        <!-- Fundamental Relations Breakdown -->
+        <div class="relation-banner" style="margin-top: 10px;">
+          
+          <div class="relation-row">
+            <span>tan(&theta;) =</span>
+            <div class="fraction-display">
+              <span class="fraction-top" style="color: var(--color-sin);" id="relSinTan">sin(&theta;)</span>
+              <span class="fraction-bottom" style="color: var(--color-cos);" id="relCosTan">cos(&theta;)</span>
+            </div>
+            <span>=</span>
+            <span style="color: var(--color-tan); font-weight: 700;" id="relResultTan">1.000</span>
+            <span style="color: var(--text-dim); font-size: 0.68rem;">[x = 1]</span>
+          </div>
+
+          <div class="relation-row">
+            <span>cot(&theta;) =</span>
+            <div class="fraction-display">
+              <span class="fraction-top" style="color: var(--color-cos);" id="relCosCot">cos(&theta;)</span>
+              <span class="fraction-bottom" style="color: var(--color-sin);" id="relSinCot">sin(&theta;)</span>
+            </div>
+            <span>=</span>
+            <span style="color: var(--color-cot); font-weight: 700;" id="relResultCot">1.000</span>
+            <span style="color: var(--text-dim); font-size: 0.68rem;">[y = 1]</span>
+          </div>
+
+        </div>
+
+      </div>
+
+    </aside>
+
+  </main>
+
+  <!-- Status Bar Footer -->
+  <footer>
+    <div>// TRIG LAB SYSTEM &bull; CALCUL RIGOREUX &amp; RENDU ISOMÉTRIQUE CANVAS 2D</div>
+    <div id="systemCoordInfo">cos: 0.707 &bull; sin: 0.707 &bull; tan: 1.000 &bull; cot: 1.000</div>
+  </footer>
+
+  <script>
+    /**
+     * TRIG LAB — Interactive Trigonometric Visualizer
+     * Pure Native Vanilla JavaScript & Canvas 2D Architecture
+     */
+    (function () {
+      'use strict';
+
+      // --- CONSTANTS & CONFIGURATION ---
+      const TWO_PI = 2 * Math.PI;
+      const ASYMPTOTE_THRESHOLD = 0.0001;
+
+      // --- APPLICATION STATE ---
+      const state = {
+        theta: Math.PI / 4, // Initial π/4
+        targetTheta: Math.PI / 4,
+        animating: false,
+        animStartTime: 0,
+        animStartTheta: 0,
+        animDelta: 0,
+        animDuration: 250,
+        
+        isPlaying: false,
+        playSpeed: 1,
+        lastFrameTime: performance.now(),
+        
+        isDraggingCircle: false,
+        
+        circleSize: { width: 0, height: 0, dpr: 1 },
+        graphSize: { width: 0, height: 0, dpr: 1 }
+      };
+
+      // --- DOM REFERENCES ---
+      const els = {
+        circleCanvas: document.getElementById('circleCanvas'),
+        circleWrapper: document.getElementById('circleWrapper'),
+        graphCanvas: document.getElementById('graphCanvas'),
+        graphWrapper: document.getElementById('graphWrapper'),
+        
+        angleSlider: document.getElementById('angleSlider'),
+        angleTextInput: document.getElementById('angleTextInput'),
+        btnInsertPi: document.getElementById('btnInsertPi'),
+        btnApplyAngle: document.getElementById('btnApplyAngle'),
+        inputParsePreview: document.getElementById('inputParsePreview'),
+        
+        btnPlay: document.getElementById('btnPlay'),
+        playIcon: document.getElementById('playIcon'),
+        playText: document.getElementById('playText'),
+        btnReset: document.getElementById('btnReset'),
+        speedBtns: document.querySelectorAll('.speed-btn'),
+        
+        exactAngleLabel: document.getElementById('exactAngleLabel'),
+        radAngleLabel: document.getElementById('radAngleLabel'),
+        degAngleLabel: document.getElementById('degAngleLabel'),
+        quadrantTag: document.getElementById('quadrantTag'),
+        
+        valCos: document.getElementById('valCos'),
+        valSin: document.getElementById('valSin'),
+        valTan: document.getElementById('valTan'),
+        valCot: document.getElementById('valCot'),
+        boxTan: document.getElementById('boxTan'),
+        boxCot: document.getElementById('boxCot'),
+        
+        relSinTan: document.getElementById('relSinTan'),
+        relCosTan: document.getElementById('relCosTan'),
+        relResultTan: document.getElementById('relResultTan'),
+        
+        relCosCot: document.getElementById('relCosCot'),
+        relSinCot: document.getElementById('relSinCot'),
+        relResultCot: document.getElementById('relResultCot'),
+        
+        circleCursorCoords: document.getElementById('circleCursorCoords'),
+        graphDomainLabel: document.getElementById('graphDomainLabel'),
+        systemCoordInfo: document.getElementById('systemCoordInfo')
+      };
+
+      const circleCtx = els.circleCanvas.getContext('2d');
+      const graphCtx = els.graphCanvas.getContext('2d');
+
+      // --- MATH & PARSER UTILITIES ---
+
+      function normalizeAngle(rad) {
+        let a = rad % TWO_PI;
+        if (a < 0) a += TWO_PI;
+        return a;
+      }
+
+      function gcd(a, b) {
+        a = Math.abs(a);
+        b = Math.abs(b);
+        while (b) {
+          const t = b;
+          b = a % b;
+          a = t;
+        }
+        return a;
+      }
+
+      /**
+       * Format angle in exact simplified form (e.g. "π/4", "3π/2", "2π/3")
+       */
+      function formatAngleExact(theta) {
+        if (Math.abs(theta) < 1e-5 || Math.abs(theta - TWO_PI) < 1e-5) {
+          return "0 (ou 2π)";
+        }
+
+        const commonDens = [1, 2, 3, 4, 6, 8, 12];
+        for (const d of commonDens) {
+          const k = Math.round((theta * d) / Math.PI);
+          const expected = (k * Math.PI) / d;
+          if (Math.abs(theta - expected) < 0.005) {
+            if (k === 0) return "0";
+            const g = gcd(k, d);
+            const num = k / g;
+            const den = d / g;
+            if (den === 1) {
+              return (num === 1 ? "" : num) + "π";
+            }
+            return (num === 1 ? "" : num) + "π/" + den;
+          }
+        }
+
+        const fracPi = theta / Math.PI;
+        return `${fracPi.toFixed(2)}π`;
+      }
+
+      function formatSmart(val, precision = 3) {
+        if (val === null || isNaN(val)) return "indéfinie";
+        if (Math.abs(val) < 1e-8) return "0";
+        if (Math.abs(val - 1) < 1e-8) return "1";
+        if (Math.abs(val + 1) < 1e-8) return "-1";
+        
+        const rounded = Number(val.toFixed(precision));
+        return Object.is(rounded, -0) ? "0" : rounded.toString();
+      }
+
+      /**
+       * Robust Mathematical Angle Parser
+       * Supports: pi/4, π/4, 3pi/4, 3π/4, 2pi/3, 1.5pi, 1.5π, 45deg, 90°, etc.
+       */
+      function parseAngleInput(str) {
+        if (!str) return null;
+        let s = str.trim().toLowerCase();
+        if (!s) return null;
+
+        // Degree notation (e.g. 45deg, 45°, 90d)
+        const degMatch = s.match(/^([+-]?\d+(?:\.\d+)?)\s*(?:deg|°|d)$/);
+        if (degMatch) {
+          const degVal = parseFloat(degMatch[1]);
+          if (!isNaN(degVal)) return normalizeAngle((degVal * Math.PI) / 180);
+        }
+
+        // Replace all π / Π unicode characters with 'pi'
+        s = s.replace(/[\u03C0\u03A0]/g, 'pi');
+        s = s.replace(/\s+/g, ''); // remove internal spaces
+
+        // Direct 'pi' aliases
+        if (s === 'pi' || s === '+pi') return Math.PI;
+        if (s === '-pi') return Math.PI;
+        if (s === '2pi' || s === '2*pi') return TWO_PI;
+        if (s === '0' || s === '0pi') return 0;
+
+        // Pattern 1: Fractions with pi e.g. "pi/4", "3pi/4", "-5pi/6", "3*pi/2"
+        const piFracMatch = s.match(/^([+-]?\d*(?:\.\d+)?)?\*?pi\/([+-]?\d+(?:\.\d+)?)$/);
+        if (piFracMatch) {
+          let numStr = piFracMatch[1];
+          if (!numStr || numStr === '+') numStr = '1';
+          if (numStr === '-') numStr = '-1';
+          const num = parseFloat(numStr);
+          const den = parseFloat(piFracMatch[2]);
+          if (!isNaN(num) && !isNaN(den) && den !== 0) {
+            return normalizeAngle((num * Math.PI) / den);
+          }
+        }
+
+        // Pattern 2: Pi multipliers e.g. "1.5pi", "0.25pi", "3pi"
+        const piMultMatch = s.match(/^([+-]?\d+(?:\.\d+)?)\*?pi$/);
+        if (piMultMatch) {
+          const mult = parseFloat(piMultMatch[1]);
+          if (!isNaN(mult)) return normalizeAngle(mult * Math.PI);
+        }
+
+        // Pattern 3: Post multipliers e.g. "pi*1.5"
+        const piPostMult = s.match(/^pi\*([+-]?\d+(?:\.\d+)?)$/);
+        if (piPostMult) {
+          const mult = parseFloat(piPostMult[1]);
+          if (!isNaN(mult)) return normalizeAngle(mult * Math.PI);
+        }
+
+        // Pattern 4: General mathematical evaluation with Math.PI replacement
+        try {
+          let expr = s.replace(/pi/g, `(${Math.PI})`);
+          if (/^[0-9+\-*/(). ]+$/.test(expr)) {
+            const evalVal = Function(`'use strict'; return (${expr})`)();
+            if (typeof evalVal === 'number' && !isNaN(evalVal) && isFinite(evalVal)) {
+              return normalizeAngle(evalVal);
+            }
+          }
+        } catch (err) {
+          // ignore
+        }
+
+        // Pattern 5: Direct numerical float fallback (e.g. 0.785, 3.14)
+        const directFloat = parseFloat(s);
+        if (!isNaN(directFloat)) {
+          return normalizeAngle(directFloat);
+        }
+
+        return null;
+      }
+
+      // --- HIGH-DPI CANVAS RESIZING ---
+
+      function resizeCanvases() {
+        const dpr = window.devicePixelRatio || 1;
+
+        const circleRect = els.circleWrapper.getBoundingClientRect();
+        const cSide = Math.min(circleRect.width, circleRect.height || circleRect.width);
+        if (cSide > 0) {
+          els.circleCanvas.width = cSide * dpr;
+          els.circleCanvas.height = cSide * dpr;
+          state.circleSize = { width: cSide, height: cSide, dpr: dpr };
+          circleCtx.resetTransform && circleCtx.resetTransform();
+          circleCtx.scale(dpr, dpr);
+        }
+
+        const graphRect = els.graphWrapper.getBoundingClientRect();
+        const gSide = Math.min(graphRect.width, graphRect.height || graphRect.width);
+        if (gSide > 0) {
+          els.graphCanvas.width = gSide * dpr;
+          els.graphCanvas.height = gSide * dpr;
+          state.graphSize = { width: gSide, height: gSide, dpr: dpr };
+          graphCtx.resetTransform && graphCtx.resetTransform();
+          graphCtx.scale(dpr, dpr);
+        }
+
+        render();
+      }
+
+      // --- RENDERING ROUTINES ---
+
+      /**
+       * 1. DRAW TRIGONOMETRIC CIRCLE
+       */
+      function drawCircle(ctx, size, theta) {
+        const w = size.width;
+        const h = size.height;
+        if (!w || !h) return;
+
+        ctx.clearRect(0, 0, w, h);
+
+        const cx = w / 2;
+        const cy = h / 2;
+        const scale = w * 0.35;
+        const R = scale;
+
+        const toPx = (x) => cx + x * scale;
+        const toPy = (y) => cy - y * scale;
+
+        // Subtle background grid
+        ctx.save();
+        ctx.strokeStyle = '#0f171d';
+        ctx.lineWidth = 1;
+        for (let gx = -1.5; gx <= 1.5; gx += 0.5) {
+          ctx.beginPath();
+          ctx.moveTo(toPx(gx), 0);
+          ctx.lineTo(toPx(gx), h);
+          ctx.stroke();
+        }
+        for (let gy = -1.5; gy <= 1.5; gy += 0.5) {
+          ctx.beginPath();
+          ctx.moveTo(0, toPy(gy));
+          ctx.lineTo(w, toPy(gy));
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        // Axes X and Y
+        ctx.save();
+        ctx.strokeStyle = '#1e2b36';
+        ctx.lineWidth = 1.5;
+        
+        ctx.beginPath();
+        ctx.moveTo(10, cy);
+        ctx.lineTo(w - 10, cy);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(cx, h - 10);
+        ctx.lineTo(cx, 10);
+        ctx.stroke();
+
+        // Arrows
+        ctx.fillStyle = '#2d3f4e';
+        ctx.beginPath();
+        ctx.moveTo(w - 6, cy);
+        ctx.lineTo(w - 14, cy - 4);
+        ctx.lineTo(w - 14, cy + 4);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(cx, 6);
+        ctx.lineTo(cx - 4, 14);
+        ctx.lineTo(cx + 4, 14);
+        ctx.fill();
+
+        // Ticks & labels (-1, 0, 1)
+        ctx.fillStyle = '#64748b';
+        ctx.font = '11px JetBrains Mono, monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+
+        [-1, 1].forEach(tick => {
+          const px = toPx(tick);
+          ctx.beginPath();
+          ctx.strokeStyle = '#334155';
+          ctx.moveTo(px, cy - 4);
+          ctx.lineTo(px, cy + 4);
+          ctx.stroke();
+          ctx.fillText(tick.toString(), px, cy + 8);
+        });
+
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        [-1, 1].forEach(tick => {
+          const py = toPy(tick);
+          ctx.beginPath();
+          ctx.strokeStyle = '#334155';
+          ctx.moveTo(cx - 4, py);
+          ctx.lineTo(cx + 4, py);
+          ctx.stroke();
+          ctx.fillText(tick.toString(), cx - 8, py);
+        });
+
+        ctx.fillText("0", cx - 6, cy + 12);
+        ctx.restore();
+
+        // Reference lines x = 1 (tangent) and y = 1 (cotangent)
+        ctx.save();
+        ctx.strokeStyle = 'rgba(101, 255, 154, 0.22)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(toPx(1), 0);
+        ctx.lineTo(toPx(1), h);
+        ctx.stroke();
+
+        ctx.strokeStyle = 'rgba(255, 180, 84, 0.22)';
+        ctx.beginPath();
+        ctx.moveTo(0, toPy(1));
+        ctx.lineTo(w, toPy(1));
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+
+        // Unit Circle
+        ctx.save();
+        ctx.strokeStyle = '#2d3f4e';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.arc(cx, cy, R, 0, TWO_PI);
+        ctx.stroke();
+        ctx.restore();
+
+        // Trigonometric values for current theta
+        const cosVal = Math.cos(theta);
+        const sinVal = Math.sin(theta);
+        const px = toPx(cosVal);
+        const py = toPy(sinVal);
+
+        // 1. Angle Sector Arc
+        ctx.save();
+        ctx.fillStyle = 'rgba(250, 204, 21, 0.08)';
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, R * 0.3, 0, -theta, true);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(250, 204, 21, 0.75)';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.arc(cx, cy, R * 0.3, 0, -theta, true);
+        ctx.stroke();
+
+        const midTheta = theta / 2;
+        const arcLabelDist = R * 0.42;
+        ctx.fillStyle = '#facc15';
+        ctx.font = 'bold 12px JetBrains Mono, monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText("θ", cx + Math.cos(midTheta) * arcLabelDist, cy - Math.sin(midTheta) * arcLabelDist);
+        ctx.restore();
+
+        // 2. Cosine Segment (Horizontal on X)
+        ctx.save();
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 3.5;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(px, cy);
+        ctx.stroke();
+
+        // 3. Sine Segment (Vertical)
+        ctx.strokeStyle = '#59d9ff';
+        ctx.lineWidth = 3.5;
+        ctx.shadowColor = 'rgba(89, 217, 255, 0.5)';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.moveTo(px, cy);
+        ctx.lineTo(px, py);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Projection dashed lines to Y-axis
+        ctx.strokeStyle = 'rgba(89, 217, 255, 0.35)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(cx, py);
+        ctx.lineTo(px, py);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Right angle marker
+        const sqSize = 8;
+        const signX = cosVal >= 0 ? -1 : 1;
+        const signY = sinVal >= 0 ? -1 : 1;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(px + signX * sqSize, cy);
+        ctx.lineTo(px + signX * sqSize, cy + signY * sqSize);
+        ctx.lineTo(px, cy + signY * sqSize);
+        ctx.stroke();
+        ctx.restore();
+
+        // 4. Tangent on line x = 1
+        const isTanAsymptote = Math.abs(cosVal) < ASYMPTOTE_THRESHOLD;
+        const tanVal = isTanAsymptote ? null : (sinVal / cosVal);
+
+        ctx.save();
+        if (!isTanAsymptote && tanVal !== null) {
+          const tanPy = toPy(tanVal);
+          const x1Px = toPx(1);
+
+          ctx.strokeStyle = 'rgba(101, 255, 154, 0.35)';
+          ctx.lineWidth = 1.2;
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath();
+          if (cosVal > 0) {
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(x1Px, tanPy);
+          } else {
+            ctx.moveTo(px, py);
+            ctx.lineTo(x1Px, tanPy);
+          }
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          ctx.strokeStyle = '#65ff9a';
+          ctx.lineWidth = 3.5;
+          ctx.shadowColor = 'rgba(101, 255, 154, 0.6)';
+          ctx.shadowBlur = 10;
+          ctx.beginPath();
+          ctx.moveTo(x1Px, cy);
+          ctx.lineTo(x1Px, tanPy);
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+
+          if (tanPy >= -10 && tanPy <= h + 10) {
+            ctx.fillStyle = '#65ff9a';
+            ctx.shadowColor = 'rgba(101, 255, 154, 0.9)';
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.arc(x1Px, tanPy, 5, 0, TWO_PI);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            ctx.fillStyle = '#65ff9a';
+            ctx.font = 'bold 10px JetBrains Mono, monospace';
+            ctx.textAlign = 'left';
+            ctx.fillText('T(1, tan θ)', x1Px + 6, tanPy);
+          }
+        }
+        ctx.restore();
+
+        // 5. Cotangent on line y = 1
+        const isCotAsymptote = Math.abs(sinVal) < ASYMPTOTE_THRESHOLD;
+        const cotVal = isCotAsymptote ? null : (cosVal / sinVal);
+
+        ctx.save();
+        if (!isCotAsymptote && cotVal !== null) {
+          const cotPx = toPx(cotVal);
+          const y1Py = toPy(1);
+
+          ctx.strokeStyle = 'rgba(255, 180, 84, 0.35)';
+          ctx.lineWidth = 1.2;
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath();
+          if (sinVal > 0) {
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cotPx, y1Py);
+          } else {
+            ctx.moveTo(px, py);
+            ctx.lineTo(cotPx, y1Py);
+          }
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          ctx.strokeStyle = '#ffb454';
+          ctx.lineWidth = 3.5;
+          ctx.shadowColor = 'rgba(255, 180, 84, 0.6)';
+          ctx.shadowBlur = 10;
+          ctx.beginPath();
+          ctx.moveTo(cx, y1Py);
+          ctx.lineTo(cotPx, y1Py);
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+
+          if (cotPx >= -10 && cotPx <= w + 10) {
+            ctx.fillStyle = '#ffb454';
+            ctx.shadowColor = 'rgba(255, 180, 84, 0.9)';
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.arc(cotPx, y1Py, 5, 0, TWO_PI);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            ctx.fillStyle = '#ffb454';
+            ctx.font = 'bold 10px JetBrains Mono, monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText('C(cot θ, 1)', cotPx, y1Py - 6);
+          }
+        }
+        ctx.restore();
+
+        // 6. Radius line to P(cos θ, sin θ)
+        ctx.save();
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(px, py);
+        ctx.stroke();
+
+        ctx.fillStyle = '#59d9ff';
+        ctx.shadowColor = 'rgba(89, 217, 255, 0.9)';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(px, py, 6, 0, TWO_PI);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(px, py, 2.5, 0, TWO_PI);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = 'bold 11px JetBrains Mono, monospace';
+        ctx.textAlign = cosVal >= 0 ? 'left' : 'right';
+        ctx.textBaseline = sinVal >= 0 ? 'bottom' : 'top';
+        const offsetDist = 10;
+        ctx.fillText(
+          'P(' + formatSmart(cosVal, 2) + ', ' + formatSmart(sinVal, 2) + ')',
+          px + (cosVal >= 0 ? offsetDist : -offsetDist),
+          py + (sinVal >= 0 ? -offsetDist : offsetDist)
+        );
+        ctx.restore();
+      }
+
+      /**
+       * 2. DRAW CARTESIAN GRAPH [0 -> theta] WITH EXACT 1:1 ISOMETRIC RATIO
+       */
+      function drawGraph(ctx, size, theta) {
+        const w = size.width;
+        const h = size.height;
+        if (!w || !h) return;
+
+        ctx.clearRect(0, 0, w, h);
+
+        const xMin = -0.35;
+        const xMax = TWO_PI + 0.55;
+        const xSpan = xMax - xMin;
+        
+        const scale = w / xSpan;
+        const toPx = (x) => (x - xMin) * scale;
+        const toPy = (y) => h / 2 - (y * scale);
+
+        // Grid
+        ctx.save();
+        ctx.strokeStyle = '#0f171d';
+        ctx.lineWidth = 1;
+
+        for (let gy = -3; gy <= 3; gy++) {
+          const py = toPy(gy);
+          ctx.beginPath();
+          ctx.moveTo(0, py);
+          ctx.lineTo(w, py);
+          ctx.stroke();
+        }
+
+        const gridX = [
+          { val: 0, label: "0" },
+          { val: Math.PI / 2, label: "π/2" },
+          { val: Math.PI, label: "π" },
+          { val: 3 * Math.PI / 2, label: "3π/2" },
+          { val: TWO_PI, label: "2π" }
+        ];
+
+        gridX.forEach(g => {
+          const px = toPx(g.val);
+          ctx.beginPath();
+          ctx.moveTo(px, 0);
+          ctx.lineTo(px, h);
+          ctx.stroke();
+        });
+        ctx.restore();
+
+        // Bounds y = 1 and y = -1
+        ctx.save();
+        ctx.strokeStyle = 'rgba(226, 232, 240, 0.12)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        
+        const py1 = toPy(1);
+        const pyMinus1 = toPy(-1);
+        
+        ctx.beginPath();
+        ctx.moveTo(0, py1);
+        ctx.lineTo(w, py1);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(0, pyMinus1);
+        ctx.lineTo(w, pyMinus1);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+
+        // Main Axes
+        ctx.save();
+        ctx.strokeStyle = '#1e2b36';
+        ctx.lineWidth = 1.5;
+
+        const py0 = toPy(0);
+        ctx.beginPath();
+        ctx.moveTo(0, py0);
+        ctx.lineTo(w - 8, py0);
+        ctx.stroke();
+
+        const px0 = toPx(0);
+        ctx.beginPath();
+        ctx.moveTo(px0, h);
+        ctx.lineTo(px0, 8);
+        ctx.stroke();
+
+        ctx.fillStyle = '#2d3f4e';
+        ctx.beginPath();
+        ctx.moveTo(w - 4, py0);
+        ctx.lineTo(w - 12, py0 - 4);
+        ctx.lineTo(w - 12, py0 + 4);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(px0, 4);
+        ctx.lineTo(px0 - 4, 12);
+        ctx.lineTo(px0 + 4, 12);
+        ctx.fill();
+
+        ctx.fillStyle = '#64748b';
+        ctx.font = '10px JetBrains Mono, monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+
+        gridX.forEach(g => {
+          const px = toPx(g.val);
+          ctx.fillText(g.label, px, py0 + 6);
+        });
+
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        [-3, -2, -1, 1, 2, 3].forEach(gy => {
+          const py = toPy(gy);
+          ctx.fillText(gy.toString(), px0 - 6, py);
+        });
+        ctx.restore();
+
+        // Asymptotes lines when within domain [0, theta]
+        const asymptotes = [
+          { x: 0, label: "x = 0 (cot)", type: "cot" },
+          { x: Math.PI / 2, label: "x = π/2 (tan)", type: "tan" },
+          { x: Math.PI, label: "x = π (cot)", type: "cot" },
+          { x: 3 * Math.PI / 2, label: "x = 3π/2 (tan)", type: "tan" },
+          { x: TWO_PI, label: "x = 2π (cot)", type: "cot" }
+        ];
+
+        ctx.save();
+        asymptotes.forEach(asymp => {
+          if (theta >= asymp.x - 0.001) {
+            const apx = toPx(asymp.x);
+            ctx.strokeStyle = 'rgba(255, 82, 82, 0.4)';
+            ctx.lineWidth = 1.1;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.moveTo(apx, 0);
+            ctx.lineTo(apx, h);
+            ctx.stroke();
+
+            ctx.fillStyle = 'rgba(255, 82, 82, 0.75)';
+            ctx.font = '9px JetBrains Mono, monospace';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'top';
+            ctx.fillText(asymp.label, apx - 4, asymp.type === 'tan' ? 6 : 18);
+          }
+        });
+        ctx.restore();
+
+        // Tracé restreint à [0, theta]
+        if (theta > 0.0001) {
+          const numSamples = Math.max(100, Math.min(1200, Math.floor(theta * 200)));
+          const dx = theta / numSamples;
+
+          // 1. COSINE CURVE
+          ctx.save();
+          ctx.strokeStyle = '#e2e8f0';
+          ctx.lineWidth = 2.2;
+          ctx.beginPath();
+          for (let i = 0; i <= numSamples; i++) {
+            const x = i * dx;
+            const y = Math.cos(x);
+            const cpx = toPx(x);
+            const cpy = toPy(y);
+            if (i === 0) ctx.moveTo(cpx, cpy);
+            else ctx.lineTo(cpx, cpy);
+          }
+          ctx.stroke();
+          ctx.restore();
+
+          // 2. SINE CURVE
+          ctx.save();
+          ctx.strokeStyle = '#59d9ff';
+          ctx.lineWidth = 2.4;
+          ctx.shadowColor = 'rgba(89, 217, 255, 0.45)';
+          ctx.shadowBlur = 6;
+          ctx.beginPath();
+          for (let i = 0; i <= numSamples; i++) {
+            const x = i * dx;
+            const y = Math.sin(x);
+            const spx = toPx(x);
+            const spy = toPy(y);
+            if (i === 0) ctx.moveTo(spx, spy);
+            else ctx.lineTo(spx, spy);
+          }
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+          ctx.restore();
+
+          // 3. TANGENT CURVE: y = tan(x)
+          ctx.save();
+          ctx.strokeStyle = '#65ff9a';
+          ctx.lineWidth = 2.8;
+          ctx.shadowColor = 'rgba(101, 255, 154, 0.5)';
+          ctx.shadowBlur = 7;
+
+          let isDrawingTan = false;
+          let prevTanY = 0;
+
+          ctx.beginPath();
+          for (let i = 0; i <= numSamples; i++) {
+            const x = i * dx;
+            const c = Math.cos(x);
+            
+            if (Math.abs(c) < ASYMPTOTE_THRESHOLD) {
+              isDrawingTan = false;
+              continue;
+            }
+
+            const y = Math.sin(x) / c;
+            const tpx = toPx(x);
+            const tpy = toPy(y);
+
+            if (isDrawingTan && Math.abs(y - prevTanY) > 8) {
+              isDrawingTan = false;
+            }
+
+            if (!isDrawingTan) {
+              ctx.moveTo(tpx, tpy);
+              isDrawingTan = true;
+            } else {
+              ctx.lineTo(tpx, tpy);
+            }
+            prevTanY = y;
+          }
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+          ctx.restore();
+
+          // 4. COTANGENT CURVE: y = cot(x)
+          ctx.save();
+          ctx.strokeStyle = '#ffb454';
+          ctx.lineWidth = 2.8;
+          ctx.shadowColor = 'rgba(255, 180, 84, 0.5)';
+          ctx.shadowBlur = 7;
+
+          let isDrawingCot = false;
+          let prevCotY = 0;
+
+          ctx.beginPath();
+          for (let i = 0; i <= numSamples; i++) {
+            const x = i * dx;
+            const s = Math.sin(x);
+            
+            if (Math.abs(s) < ASYMPTOTE_THRESHOLD) {
+              isDrawingCot = false;
+              continue;
+            }
+
+            const y = Math.cos(x) / s;
+            const cpx = toPx(x);
+            const cpy = toPy(y);
+
+            if (isDrawingCot && Math.abs(y - prevCotY) > 8) {
+              isDrawingCot = false;
+            }
+
+            if (!isDrawingCot) {
+              ctx.moveTo(cpx, cpy);
+              isDrawingCot = true;
+            } else {
+              ctx.lineTo(cpx, cpy);
+            }
+            prevCotY = y;
+          }
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+          ctx.restore();
+
+          // Guide line at x = θ
+          const curPx = toPx(theta);
+          ctx.save();
+          ctx.strokeStyle = 'rgba(250, 204, 21, 0.4)';
+          ctx.lineWidth = 1;
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath();
+          ctx.moveTo(curPx, 0);
+          ctx.lineTo(curPx, h);
+          ctx.stroke();
+          ctx.restore();
+
+          // Current Value Endpoints at x = θ
+          const curCos = Math.cos(theta);
+          const curSin = Math.sin(theta);
+          const curCosPy = toPy(curCos);
+          const curSinPy = toPy(curSin);
+
+          // Dot for Cosine
+          ctx.save();
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(curPx, curCosPy, 4.5, 0, TWO_PI);
+          ctx.fill();
+
+          // Dot for Sine
+          ctx.fillStyle = '#59d9ff';
+          ctx.shadowColor = 'rgba(89, 217, 255, 0.9)';
+          ctx.shadowBlur = 8;
+          ctx.beginPath();
+          ctx.arc(curPx, curSinPy, 5, 0, TWO_PI);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+
+          // Dot for Tangent
+          if (Math.abs(curCos) >= ASYMPTOTE_THRESHOLD) {
+            const curTan = curSin / curCos;
+            const curTanPy = toPy(curTan);
+            if (curTanPy >= 0 && curTanPy <= h) {
+              ctx.fillStyle = '#65ff9a';
+              ctx.shadowColor = 'rgba(101, 255, 154, 0.9)';
+              ctx.shadowBlur = 9;
+              ctx.beginPath();
+              ctx.arc(curPx, curTanPy, 5, 0, TWO_PI);
+              ctx.fill();
+            }
+          }
+
+          // Dot for Cotangent
+          if (Math.abs(curSin) >= ASYMPTOTE_THRESHOLD) {
+            const curCot = curCos / curSin;
+            const curCotPy = toPy(curCot);
+            if (curCotPy >= 0 && curCotPy <= h) {
+              ctx.fillStyle = '#ffb454';
+              ctx.shadowColor = 'rgba(255, 180, 84, 0.9)';
+              ctx.shadowBlur = 9;
+              ctx.beginPath();
+              ctx.arc(curPx, curCotPy, 5, 0, TWO_PI);
+              ctx.fill();
+            }
+          }
+          ctx.restore();
+        }
+      }
+
+      /**
+       * 3. UPDATE NUMERICAL TELEMETRY & DOM VALUES
+       */
+      function updateUI(theta) {
+        const cosVal = Math.cos(theta);
+        const sinVal = Math.sin(theta);
+        
+        const isTanAsymptote = Math.abs(cosVal) < ASYMPTOTE_THRESHOLD;
+        const tanVal = isTanAsymptote ? null : (sinVal / cosVal);
+
+        const isCotAsymptote = Math.abs(sinVal) < ASYMPTOTE_THRESHOLD;
+        const cotVal = isCotAsymptote ? null : (cosVal / sinVal);
+
+        if (document.activeElement !== els.angleSlider) {
+          els.angleSlider.value = theta;
+        }
+
+        const exactStr = formatAngleExact(theta);
+        els.exactAngleLabel.innerHTML = `&theta; = ${exactStr}`;
+        els.radAngleLabel.textContent = `${theta.toFixed(3)} rad`;
+        const degVal = (theta * 180 / Math.PI);
+        els.degAngleLabel.textContent = `${degVal.toFixed(1)}°`;
+
+        let quad = "QUADRANT I";
+        if (theta > Math.PI * 1.5) quad = "QUADRANT IV";
+        else if (theta > Math.PI) quad = "QUADRANT III";
+        else if (theta > Math.PI * 0.5) quad = "QUADRANT II";
+        els.quadrantTag.textContent = quad;
+
+        els.valCos.textContent = formatSmart(cosVal, 3);
+        els.valSin.textContent = formatSmart(sinVal, 3);
+
+        // Tangent
+        if (isTanAsymptote) {
+          els.boxTan.classList.add('is-asymptote');
+          els.valTan.textContent = "indéfinie (±∞)";
+          els.relResultTan.textContent = "indéfinie";
+          els.relSinTan.textContent = formatSmart(sinVal, 2);
+          els.relCosTan.textContent = "0";
+        } else {
+          els.boxTan.classList.remove('is-asymptote');
+          els.valTan.textContent = formatSmart(tanVal, 3);
+          els.relResultTan.textContent = formatSmart(tanVal, 3);
+          els.relSinTan.textContent = formatSmart(sinVal, 3);
+          els.relCosTan.textContent = formatSmart(cosVal, 3);
+        }
+
+        // Cotangent
+        if (isCotAsymptote) {
+          els.boxCot.classList.add('is-asymptote');
+          els.valCot.textContent = "indéfinie (±∞)";
+          els.relResultCot.textContent = "indéfinie";
+          els.relCosCot.textContent = formatSmart(cosVal, 2);
+          els.relSinCot.textContent = "0";
+        } else {
+          els.boxCot.classList.remove('is-asymptote');
+          els.valCot.textContent = formatSmart(cotVal, 3);
+          els.relResultCot.textContent = formatSmart(cotVal, 3);
+          els.relCosCot.textContent = formatSmart(cosVal, 3);
+          els.relSinCot.textContent = formatSmart(sinVal, 3);
+        }
+
+        els.circleCursorCoords.textContent = `P(${formatSmart(cosVal, 2)}, ${formatSmart(sinVal, 2)})`;
+        els.graphDomainLabel.innerHTML = `x &isin; [0, ${exactStr}]`;
+        els.systemCoordInfo.textContent = `cos: ${formatSmart(cosVal, 3)} • sin: ${formatSmart(sinVal, 3)} • tan: ${isTanAsymptote ? '±∞' : formatSmart(tanVal, 3)} • cot: ${isCotAsymptote ? '±∞' : formatSmart(cotVal, 3)}`;
+      }
+
+      function render() {
+        drawCircle(circleCtx, state.circleSize, state.theta);
+        drawGraph(graphCtx, state.graphSize, state.theta);
+        updateUI(state.theta);
+      }
+
+      // --- SMOOTH EASING & ANIMATION LOOP ---
+
+      function easeOutCubic(t) {
+        return 1 - Math.pow(1 - t, 3);
+      }
+
+      function animateTo(target, duration = 280) {
+        state.targetTheta = normalizeAngle(target);
+        state.animStartTheta = state.theta;
+        state.animDelta = state.targetTheta - state.animStartTheta;
+        state.animStartTime = performance.now();
+        state.animDuration = duration;
+        state.animating = true;
+      }
+
+      function animationLoop(now) {
+        const dt = (now - state.lastFrameTime) / 1000;
+        state.lastFrameTime = now;
+
+        if (state.animating) {
+          const elapsed = now - state.animStartTime;
+          const progress = Math.min(1, elapsed / state.animDuration);
+          const eased = easeOutCubic(progress);
+          
+          state.theta = normalizeAngle(state.animStartTheta + state.animDelta * eased);
+          
+          if (progress >= 1) {
+            state.theta = state.targetTheta;
+            state.animating = false;
+          }
+          render();
+        }
+
+        if (state.isPlaying) {
+          const speedFactor = 0.5 * state.playSpeed;
+          state.theta = (state.theta + speedFactor * dt) % TWO_PI;
+          render();
+        }
+
+        requestAnimationFrame(animationLoop);
+      }
+
+      // --- USER INTERACTION ---
+
+      function handleCircleInteraction(e) {
+        const rect = els.circleCanvas.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        
+        const dx = clientX - cx;
+        const dy = cy - clientY;
+        
+        let angle = Math.atan2(dy, dx);
+        if (angle < 0) angle += TWO_PI;
+        
+        state.theta = angle;
+        state.animating = false;
+        render();
+      }
+
+      els.circleCanvas.addEventListener('mousedown', (e) => {
+        state.isDraggingCircle = true;
+        handleCircleInteraction(e);
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (state.isDraggingCircle) {
+          handleCircleInteraction(e);
+        }
+      });
+
+      window.addEventListener('mouseup', () => {
+        state.isDraggingCircle = false;
+      });
+
+      els.circleCanvas.addEventListener('touchstart', (e) => {
+        state.isDraggingCircle = true;
+        handleCircleInteraction(e);
+        e.preventDefault();
+      }, { passive: false });
+
+      window.addEventListener('touchmove', (e) => {
+        if (state.isDraggingCircle) {
+          handleCircleInteraction(e);
+          e.preventDefault();
+        }
+      }, { passive: false });
+
+      window.addEventListener('touchend', () => {
+        state.isDraggingCircle = false;
+      });
+
+      // Slider
+      els.angleSlider.addEventListener('input', (e) => {
+        state.theta = parseFloat(e.target.value);
+        state.animating = false;
+        render();
+      });
+
+      // Input Parser Helper
+      function applyManualInput() {
+        const inputVal = els.angleTextInput.value;
+        const parsed = parseAngleInput(inputVal);
+        if (parsed !== null) {
+          animateTo(parsed, 280);
+          els.angleTextInput.classList.remove('input-invalid');
+          els.angleTextInput.classList.add('input-valid');
+          els.inputParsePreview.innerHTML = `<span style="color: var(--color-tan);">Valeur interprétée : ${formatAngleExact(parsed)} (${(parsed * 180 / Math.PI).toFixed(1)}°)</span>`;
+          setTimeout(() => {
+            els.angleTextInput.classList.remove('input-valid');
+          }, 800);
+        } else if (inputVal.trim().length > 0) {
+          els.angleTextInput.classList.remove('input-valid');
+          els.angleTextInput.classList.add('input-invalid');
+          els.inputParsePreview.innerHTML = `<span style="color: var(--color-asymptote);">Expression non reconnue (ex: pi/4, π/4, 2pi/3)</span>`;
+          setTimeout(() => {
+            els.angleTextInput.classList.remove('input-invalid');
+          }, 1200);
+        }
+      }
+
+      els.btnApplyAngle.addEventListener('click', applyManualInput);
+      els.angleTextInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') applyManualInput();
+      });
+
+      // Insert Pi Button
+      els.btnInsertPi.addEventListener('click', () => {
+        const input = els.angleTextInput;
+        const start = input.selectionStart || input.value.length;
+        const end = input.selectionEnd || input.value.length;
+        const current = input.value;
+        input.value = current.substring(0, start) + "π" + current.substring(end);
+        input.focus();
+        input.setSelectionRange(start + 1, start + 1);
+        
+        // Trigger live preview
+        const parsed = parseAngleInput(input.value);
+        if (parsed !== null) {
+          els.inputParsePreview.innerHTML = `<span style="color: var(--color-theta);">&theta; &rarr; ${formatAngleExact(parsed)} (${(parsed * 180 / Math.PI).toFixed(1)}°)</span>`;
+        }
+      });
+
+      // Live typing preview
+      els.angleTextInput.addEventListener('input', (e) => {
+        const val = e.target.value.trim();
+        if (!val) {
+          els.inputParsePreview.innerHTML = 'Syntaxe : pi/4, &pi;/4, 3*pi/2, 1.5pi, 45deg...';
+          return;
+        }
+        const parsed = parseAngleInput(val);
+        if (parsed !== null) {
+          els.inputParsePreview.innerHTML = `<span style="color: var(--color-theta);">&theta; = ${formatAngleExact(parsed)} (${(parsed * 180 / Math.PI).toFixed(1)}°)</span>`;
+        } else {
+          els.inputParsePreview.innerHTML = `<span style="color: var(--text-dim);">En attente d'une expression valide...</span>`;
+        }
+      });
+
+      // Play / Pause
+      els.btnPlay.addEventListener('click', () => {
+        state.isPlaying = !state.isPlaying;
+        if (state.isPlaying) {
+          els.btnPlay.classList.add('active');
+          els.playIcon.innerHTML = "&block;";
+          els.playText.textContent = "Pause";
+        } else {
+          els.btnPlay.classList.remove('active');
+          els.playIcon.innerHTML = "&blacktriangleright;";
+          els.playText.textContent = "Lecture auto";
+        }
+      });
+
+      // Speed Buttons
+      els.speedBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          els.speedBtns.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          state.playSpeed = parseFloat(btn.dataset.speed);
+        });
+      });
+
+      // Reset Button
+      els.btnReset.addEventListener('click', () => {
+        state.isPlaying = false;
+        els.btnPlay.classList.remove('active');
+        els.playIcon.innerHTML = "&blacktriangleright;";
+        els.playText.textContent = "Lecture auto";
+        animateTo(0, 200);
+      });
+
+      // Sizing Observer
+      const resizeObserver = new ResizeObserver(() => {
+        resizeCanvases();
+      });
+      resizeObserver.observe(els.circleWrapper);
+      resizeObserver.observe(els.graphWrapper);
+      window.addEventListener('resize', resizeCanvases);
+
+      // Startup
+      window.addEventListener('DOMContentLoaded', () => {
+        resizeCanvases();
+        render();
+        requestAnimationFrame(animationLoop);
+      });
+
+    })();
+  </script>
+</body>
+</html>
