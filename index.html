@@ -888,7 +888,8 @@
 
       // --- APPLICATION STATE ---
       const state = {
-        theta: Math.PI / 4, // Initial π/4
+        theta: Math.PI / 4, // Normalized angle used by the circle and readouts
+        graphTheta: Math.PI / 4, // Continuous angle used to scroll the graph across revolutions
         targetTheta: Math.PI / 4,
         animating: false,
         animStartTime: 0,
@@ -1118,7 +1119,7 @@
       /**
        * 1. DRAW TRIGONOMETRIC CIRCLE
        */
-      function drawCircle(ctx, size, theta) {
+      function drawCircle(ctx, size, theta, isPlaying = false) {
         const w = size.width;
         const h = size.height;
         if (!w || !h) return;
@@ -1246,6 +1247,20 @@
 
         // 1. Angle Sector Arc
         ctx.save();
+        // Fade the sector at the 360°/0° seam during auto-play to avoid a visible flash.
+        let sectorOpacity = 1;
+        if (isPlaying) {
+          const seamWindow = Math.PI / 30; // 6° on either side of the seam
+          let seamProgress = 1;
+          if (theta < seamWindow) {
+            seamProgress = theta / seamWindow;
+          } else if (theta > TWO_PI - seamWindow) {
+            seamProgress = (TWO_PI - theta) / seamWindow;
+          }
+          seamProgress = Math.max(0, Math.min(1, seamProgress));
+          sectorOpacity = seamProgress * seamProgress * (3 - 2 * seamProgress);
+        }
+        ctx.globalAlpha = sectorOpacity;
         ctx.fillStyle = 'rgba(250, 204, 21, 0.08)';
         ctx.beginPath();
         ctx.moveTo(cx, cy);
@@ -1457,13 +1472,13 @@
 
         ctx.clearRect(0, 0, w, h);
 
-        const xMin = -0.35;
-        const xMax = TWO_PI + 0.55;
-        const xSpan = xMax - xMin;
-        
+        // Keep the current drawing point fixed at the horizontal center of the graph.
+        const xSpan = TWO_PI + 0.9;
         const scale = w / xSpan;
-        const toPx = (x) => (x - xMin) * scale;
+        const toPx = (x) => (x - theta) * scale + w / 2;
         const toPy = (y) => h / 2 - (y * scale);
+        const plotStart = Math.max(0, theta - xSpan / 2);
+        const plotSpan = Math.max(0, theta - plotStart);
 
         // Grid
         ctx.save();
@@ -1478,21 +1493,16 @@
           ctx.stroke();
         }
 
-        const gridX = [
-          { val: 0, label: "0" },
-          { val: Math.PI / 2, label: "π/2" },
-          { val: Math.PI, label: "π" },
-          { val: 3 * Math.PI / 2, label: "3π/2" },
-          { val: TWO_PI, label: "2π" }
-        ];
-
-        gridX.forEach(g => {
-          const px = toPx(g.val);
+        const gridStep = Math.PI / 2;
+        const firstGridIndex = Math.max(0, Math.ceil((theta - xSpan / 2) / gridStep));
+        const lastGridIndex = Math.floor((theta + xSpan / 2) / gridStep);
+        for (let k = firstGridIndex; k <= lastGridIndex; k++) {
+          const px = toPx(k * gridStep);
           ctx.beginPath();
           ctx.moveTo(px, 0);
           ctx.lineTo(px, h);
           ctx.stroke();
-        });
+        }
         ctx.restore();
 
         // Bounds y = 1 and y = -1
@@ -1546,32 +1556,28 @@
         ctx.lineTo(px0 + 4, 12);
         ctx.fill();
 
-        ctx.fillStyle = '#64748b';
-        ctx.font = '10px JetBrains Mono, monospace';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-
-        gridX.forEach(g => {
-          const px = toPx(g.val);
-          ctx.fillText(g.label, px, py0 + 6);
-        });
-
-        ctx.textAlign = 'right';
-        ctx.textBaseline = 'middle';
-        [-3, -2, -1, 1, 2, 3].forEach(gy => {
-          const py = toPy(gy);
-          ctx.fillText(gy.toString(), px0 - 6, py);
-        });
+        // Axis graduation labels are intentionally omitted for the scrolling view.
         ctx.restore();
 
-        // Asymptotes lines when within domain [0, theta]
-        const asymptotes = [
-          { x: 0, label: "x = 0 (cot)", type: "cot" },
-          { x: Math.PI / 2, label: "x = π/2 (tan)", type: "tan" },
-          { x: Math.PI, label: "x = π (cot)", type: "cot" },
-          { x: 3 * Math.PI / 2, label: "x = 3π/2 (tan)", type: "tan" },
-          { x: TWO_PI, label: "x = 2π (cot)", type: "cot" }
-        ];
+        // Draw cotangent/tangent asymptotes only as the scrolling trace reaches them.
+        const asymptotes = [];
+        const asymptoteStep = Math.PI / 2;
+        const firstAsymptoteIndex = Math.max(0, Math.ceil((plotStart - 0.001) / asymptoteStep));
+        const lastAsymptoteIndex = Math.floor((theta + 0.001) / asymptoteStep);
+        for (let k = firstAsymptoteIndex; k <= lastAsymptoteIndex; k++) {
+          const x = k * asymptoteStep;
+          const type = k % 2 === 0 ? "cot" : "tan";
+          let xLabel;
+          if (k === 0) {
+            xLabel = "0";
+          } else if (k % 2 === 0) {
+            const multiple = k / 2;
+            xLabel = (multiple === 1 ? "" : String(multiple)) + "π";
+          } else {
+            xLabel = String(k) + "π/2";
+          }
+          asymptotes.push({ x: x, label: "x = " + xLabel + " (" + type + ")", type: type });
+        }
 
         ctx.save();
         asymptotes.forEach(asymp => {
@@ -1595,9 +1601,9 @@
         ctx.restore();
 
         // Tracé restreint à [0, theta]
-        if (theta > 0.0001) {
-          const numSamples = Math.max(100, Math.min(1200, Math.floor(theta * 200)));
-          const dx = theta / numSamples;
+        if (plotSpan > 0.0001) {
+          const numSamples = Math.max(100, Math.min(1200, Math.floor(plotSpan * 200)));
+          const dx = plotSpan / numSamples;
 
           // 1. COSINE CURVE
           ctx.save();
@@ -1605,7 +1611,7 @@
           ctx.lineWidth = 2.2;
           ctx.beginPath();
           for (let i = 0; i <= numSamples; i++) {
-            const x = i * dx;
+            const x = plotStart + i * dx;
             const y = Math.cos(x);
             const cpx = toPx(x);
             const cpy = toPy(y);
@@ -1623,7 +1629,7 @@
           ctx.shadowBlur = 6;
           ctx.beginPath();
           for (let i = 0; i <= numSamples; i++) {
-            const x = i * dx;
+            const x = plotStart + i * dx;
             const y = Math.sin(x);
             const spx = toPx(x);
             const spy = toPy(y);
@@ -1646,7 +1652,7 @@
 
           ctx.beginPath();
           for (let i = 0; i <= numSamples; i++) {
-            const x = i * dx;
+            const x = plotStart + i * dx;
             const c = Math.cos(x);
             
             if (Math.abs(c) < ASYMPTOTE_THRESHOLD) {
@@ -1686,7 +1692,7 @@
 
           ctx.beginPath();
           for (let i = 0; i <= numSamples; i++) {
-            const x = i * dx;
+            const x = plotStart + i * dx;
             const s = Math.sin(x);
             
             if (Math.abs(s) < ASYMPTOTE_THRESHOLD) {
@@ -1842,13 +1848,13 @@
         }
 
         els.circleCursorCoords.textContent = `P(${formatSmart(cosVal, 2)}, ${formatSmart(sinVal, 2)})`;
-        els.graphDomainLabel.innerHTML = `x &isin; [0, ${exactStr}]`;
+        els.graphDomainLabel.textContent = 'θ au centre';
         els.systemCoordInfo.textContent = `cos: ${formatSmart(cosVal, 3)} • sin: ${formatSmart(sinVal, 3)} • tan: ${isTanAsymptote ? '±∞' : formatSmart(tanVal, 3)} • cot: ${isCotAsymptote ? '±∞' : formatSmart(cotVal, 3)}`;
       }
 
       function render() {
-        drawCircle(circleCtx, state.circleSize, state.theta);
-        drawGraph(graphCtx, state.graphSize, state.theta);
+        drawCircle(circleCtx, state.circleSize, state.theta, state.isPlaying);
+        drawGraph(graphCtx, state.graphSize, state.graphTheta);
         updateUI(state.theta);
       }
 
@@ -1877,6 +1883,7 @@
           const eased = easeOutCubic(progress);
           
           state.theta = normalizeAngle(state.animStartTheta + state.animDelta * eased);
+          state.graphTheta = state.theta;
           
           if (progress >= 1) {
             state.theta = state.targetTheta;
@@ -1887,7 +1894,9 @@
 
         if (state.isPlaying) {
           const speedFactor = 0.5 * state.playSpeed;
-          state.theta = (state.theta + speedFactor * dt) % TWO_PI;
+          const angleDelta = speedFactor * dt;
+          state.theta = (state.theta + angleDelta) % TWO_PI;
+          state.graphTheta += angleDelta;
           render();
         }
 
@@ -1911,6 +1920,7 @@
         if (angle < 0) angle += TWO_PI;
         
         state.theta = angle;
+        state.graphTheta = angle;
         state.animating = false;
         render();
       }
@@ -1950,6 +1960,7 @@
       // Slider
       els.angleSlider.addEventListener('input', (e) => {
         state.theta = parseFloat(e.target.value);
+        state.graphTheta = state.theta;
         state.animating = false;
         render();
       });
